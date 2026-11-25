@@ -15,7 +15,7 @@ class TrelloWorkloadApp {
         // Configuración en cliente
         this.boardId = localStorage.getItem('trello_board_id') || '3X5asYe2';
         this.apiKey = localStorage.getItem('trello_api_key') || 'b965fb95cbe116da68a5e88b85123d71';
-        this.apiToken = localStorage.getItem('trello_api_token') || '';
+        this.apiToken = localStorage.getItem('trello_api_token') || 'ATTA45910e33bc9e653ebb9831925aaa17aa40912fcb759e47152133f1e70e27ce00DFA2F046';
 
         this.initElements();
         this.bindEvents();
@@ -436,7 +436,41 @@ class TrelloWorkloadApp {
     getFilteredMembers() {
         if (!this.data || !this.data.members) return [];
 
-        return this.data.members.filter(member => {
+        let membersList = [...this.data.members];
+
+        // Incluir tarjeta de proyectos generales sin asignar si existen
+        if (this.data.unassigned_cards && this.data.unassigned_cards.length > 0) {
+            const activeUnassigned = this.data.unassigned_cards.filter(c => !c.isDone);
+            const unassignedMember = {
+                id: 'unassigned_pool',
+                fullName: 'Banco de Proyectos (Sin Asignar)',
+                username: 'general_gyc',
+                initials: 'GyC',
+                isUnassignedPool: true,
+                cards: this.data.unassigned_cards,
+                stats: {
+                    total: this.data.unassigned_cards.length,
+                    active: activeUnassigned.length,
+                    completed: this.data.unassigned_cards.filter(c => c.isDone).length,
+                    overdue: this.data.unassigned_cards.filter(c => c.dueStatus === 'overdue').length,
+                    due_soon: this.data.unassigned_cards.filter(c => c.dueStatus === 'due_soon').length
+                },
+                workload: {
+                    level: 'moderate',
+                    label: 'Pendientes',
+                    badge_class: 'status-moderate',
+                    percentage: Math.min(Math.round((activeUnassigned.length / 5) * 100), 100),
+                    description: 'Proyectos y tareas generales a la espera de ser asignados a un integrante del área.'
+                }
+            };
+
+            // Solo mostrarlo si el filtro es 'all' o si coincide con la búsqueda
+            if (this.activeFilter === 'all') {
+                membersList.push(unassignedMember);
+            }
+        }
+
+        return membersList.filter(member => {
             if (this.activeFilter !== 'all' && member.workload.level !== this.activeFilter) {
                 return false;
             }
@@ -500,12 +534,17 @@ class TrelloWorkloadApp {
                             ${t.dueFormatted.split(' ')[0]}
                         </span>`;
                     }
+                    const labelsMini = (t.labels || []).slice(0, 2).map(l => {
+                        const colorClass = l.color ? `label-${l.color}` : '';
+                        return `<span class="task-label-chip ${colorClass}">${this.escapeHtml(l.name)}</span>`;
+                    }).join('');
                     return `
                         <div class="task-mini-item">
                             <div class="task-mini-name">${this.escapeHtml(t.name)}</div>
                             <div class="task-mini-meta">
                                 <span class="task-mini-stage">${this.escapeHtml(t.listName)}</span>
                                 ${dueHtml}
+                                ${labelsMini}
                             </div>
                         </div>
                     `;
@@ -618,23 +657,39 @@ class TrelloWorkloadApp {
             });
         });
 
+        if (this.data.unassigned_cards) {
+            this.data.unassigned_cards.forEach(c => {
+                if (!allCards.some(existing => existing.id === c.id)) {
+                    allCards.push({ ...c, assignedTo: 'Sin asignar' });
+                }
+            });
+        }
+
         this.data.lists.forEach(list => {
             const listCards = allCards.filter(c => c.listId === list.id);
 
             const col = document.createElement('div');
             col.className = 'kanban-column';
 
-            let cardsHtml = listCards.map(c => `
+            let cardsHtml = listCards.map(c => {
+                const labelsMini = (c.labels || []).map(l => {
+                    const colorClass = l.color ? `label-${l.color}` : '';
+                    return `<span class="task-label-chip ${colorClass}">${this.escapeHtml(l.name)}</span>`;
+                }).join('');
+
+                return `
                 <div class="kanban-card">
                     <div style="font-weight: 600; color: #FFFFFF; font-size: 0.88rem; margin-bottom: 6px;">
                         ${this.escapeHtml(c.name)}
                     </div>
-                    <div style="font-size: 0.76rem; color: var(--text-muted); display: flex; justify-content: space-between;">
+                    ${labelsMini ? `<div style="display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 6px;">${labelsMini}</div>` : ''}
+                    <div style="font-size: 0.76rem; color: var(--text-muted); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 4px;">
                         <span>👤 ${this.escapeHtml(c.assignedTo)}</span>
                         ${c.dueFormatted ? `<span>📅 ${c.dueFormatted.split(' ')[0]}</span>` : ''}
                     </div>
                 </div>
-            `).join('');
+                `;
+            }).join('');
 
             if (listCards.length === 0) {
                 cardsHtml = `<div style="font-size: 0.8rem; color: var(--text-muted); padding: 12px 0; text-align: center;">Sin tarjetas</div>`;
@@ -656,7 +711,7 @@ class TrelloWorkloadApp {
 
     openMemberModal(memberId) {
         if (!this.data) return;
-        const member = this.data.members.find(m => m.id === memberId);
+        const member = (this.getFilteredMembers() || []).find(m => m.id === memberId) || (this.data.members || []).find(m => m.id === memberId);
         if (!member) return;
 
         this.selectedMember = member;
@@ -677,9 +732,10 @@ class TrelloWorkloadApp {
                 const cardEl = document.createElement('div');
                 cardEl.className = 'modal-task-card';
 
-                const labelsHtml = (card.labels || []).map(l => 
-                    `<span class="task-label-chip">${this.escapeHtml(l.name)}</span>`
-                ).join('');
+                const labelsHtml = (card.labels || []).map(l => {
+                    const colorClass = l.color ? `label-${l.color}` : '';
+                    return `<span class="task-label-chip ${colorClass}">${this.escapeHtml(l.name)}</span>`;
+                }).join('');
 
                 cardEl.innerHTML = `
                     <div class="modal-task-top">

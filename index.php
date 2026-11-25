@@ -329,8 +329,8 @@ $config = get_app_config();
 
                     <div class="form-group">
                         <label class="form-label" for="setting-api-token">Trello Token (Autorización)</label>
-                        <input type="text" id="setting-api-token" class="form-control" value="" placeholder="Pegue aquí el Token generado" autocomplete="off" required>
-                        <div class="form-help">Código obtenido del botón superior para leer de forma segura las tarjetas del tablero.</div>
+                        <input type="text" id="setting-api-token" class="form-control" value="ATTA45910e33bc9e653ebb9831925aaa17aa40912fcb759e47152133f1e70e27ce00DFA2F046" placeholder="Pegue aquí el Token generado" autocomplete="off" required>
+                        <div class="form-help">Código de autorización vinculado al tablero de la división.</div>
                     </div>
 
                     <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px;">

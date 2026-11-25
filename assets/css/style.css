@@ -1177,6 +1177,42 @@ button {
     border: 1px solid rgba(2, 132, 199, 0.3);
 }
 
+.task-label-chip.label-red, .task-label-chip.label-red_dark {
+    background: rgba(239, 68, 68, 0.18);
+    color: #FCA5A5;
+    border-color: rgba(239, 68, 68, 0.4);
+}
+
+.task-label-chip.label-green, .task-label-chip.label-green_dark, .task-label-chip.label-green_light {
+    background: rgba(16, 185, 129, 0.18);
+    color: #6EE7B7;
+    border-color: rgba(16, 185, 129, 0.4);
+}
+
+.task-label-chip.label-orange, .task-label-chip.label-orange_dark, .task-label-chip.label-orange_light {
+    background: rgba(249, 115, 22, 0.18);
+    color: #FDBA74;
+    border-color: rgba(249, 115, 22, 0.4);
+}
+
+.task-label-chip.label-purple, .task-label-chip.label-purple_dark, .task-label-chip.label-purple_light {
+    background: rgba(168, 85, 247, 0.18);
+    color: #D8B4FE;
+    border-color: rgba(168, 85, 247, 0.4);
+}
+
+.task-label-chip.label-lime, .task-label-chip.label-lime_dark {
+    background: rgba(132, 204, 22, 0.18);
+    color: #BEF264;
+    border-color: rgba(132, 204, 22, 0.4);
+}
+
+.task-label-chip.label-yellow, .task-label-chip.label-yellow_dark {
+    background: rgba(234, 179, 8, 0.18);
+    color: #FDE047;
+    border-color: rgba(234, 179, 8, 0.4);
+}
+
 .btn-open-trello {
     display: inline-flex;
     align-items: center;
