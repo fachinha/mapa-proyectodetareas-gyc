@@ -4,9 +4,39 @@
  * Compatible con Cloudflare Pages (Frontend estático) y servidores PHP (XAMPP/Apache)
  */
 
+// Áreas y tableros asociados (se buscan por nombre entre los tableros accesibles con el token)
+const AREAS = {
+    general: { label: 'General' },
+    empleo: {
+        label: 'Empleo',
+        boards: ['calendario de contenido oil'],
+        labels: ['empleo', 'expo laboral']
+    },
+    capacitaciones: {
+        label: 'Capacitaciones',
+        boards: ['centro de formacion profesional'],
+        labels: ['capacitacion']
+    },
+    pymes: {
+        label: 'Emprendimientos y Pymes',
+        boards: ['calendario de contenido emprendimientos', 'comunicacion pic'],
+        labels: ['emprendimiento', 'pyme']
+    }
+};
+
+const BOARD_DISPLAY_NAMES = {
+    empleo: ['Calendario de Contenido OIL'],
+    capacitaciones: ['Centro de Formación Profesional'],
+    pymes: ['Calendario de Contenido Emprendimientos y Pymes', 'Comunicación PIC']
+};
+
+const normalizeText = (s) => (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+
 class TrelloWorkloadApp {
     constructor() {
         this.data = null;
+        this.raw = null;
+        this.activeArea = 'general';
         this.activeFilter = 'all';
         this.currentView = 'cards';
         this.searchQuery = '';
@@ -77,6 +107,16 @@ class TrelloWorkloadApp {
             this.render();
         });
 
+        // Selector de área
+        const areaTabs = document.querySelectorAll('.area-tab');
+        areaTabs.forEach(tab => {
+            tab.addEventListener('click', () => {
+                areaTabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                this.setArea(tab.dataset.area);
+            });
+        });
+
         // Filtros de nivel de carga
         const filterBtns = document.querySelectorAll('.filter-btn');
         filterBtns.forEach(btn => {
@@ -122,26 +162,23 @@ class TrelloWorkloadApp {
             // 1. Si tenemos credenciales en el cliente (Cloudflare Pages o directo)
             if (this.apiKey && this.apiToken && this.boardId) {
                 // Revisar caché cliente en sessionStorage (5 minutos)
-                const cacheKey = `trello_cache_${this.boardId}`;
+                const cacheKey = `trello_raw_v2_${this.boardId}`;
                 const cached = sessionStorage.getItem(cacheKey);
                 const cacheTime = sessionStorage.getItem(`${cacheKey}_time`);
 
                 if (!forceRefresh && cached && cacheTime && (Date.now() - parseInt(cacheTime)) < 300000) {
-                    this.data = JSON.parse(cached);
-                    this.data.meta.source = 'cache';
-                    this.updateHeaderAndKPIs();
-                    this.render();
+                    this.raw = JSON.parse(cached);
+                    this.raw.source = 'cache';
+                    this.applyArea();
                     return;
                 }
 
                 // Petición directa a Trello REST API (CORS habilitado por Trello)
                 try {
-                    const freshData = await this.fetchDirectFromTrello();
-                    this.data = freshData;
-                    sessionStorage.setItem(cacheKey, JSON.stringify(freshData));
+                    this.raw = await this.fetchDirectFromTrello();
+                    sessionStorage.setItem(cacheKey, JSON.stringify(this.raw));
                     sessionStorage.setItem(`${cacheKey}_time`, Date.now().toString());
-                    this.updateHeaderAndKPIs();
-                    this.render();
+                    this.applyArea();
                     if (forceRefresh) this.showToast('Datos actualizados en vivo desde Trello');
                     return;
                 } catch (trelloErr) {
@@ -155,8 +192,10 @@ class TrelloWorkloadApp {
                 const url = `api/trello.php${forceRefresh ? '?refresh=1' : ''}`;
                 const res = await fetch(url);
                 if (res.ok) {
+                    this.raw = null;
                     this.data = await res.json();
                     this.updateHeaderAndKPIs();
+                    this.updateAreaUI();
                     this.render();
                     if (forceRefresh) this.showToast('Datos actualizados');
                     return;
@@ -166,9 +205,8 @@ class TrelloWorkloadApp {
             }
 
             // 3. Fallback: Dataset institucional de alta fidelidad
-            this.data = this.getDemoInstitutionalDataset();
-            this.updateHeaderAndKPIs();
-            this.render();
+            this.raw = this.getDemoInstitutionalDataset();
+            this.applyArea();
             if (forceRefresh) this.showToast('Tablero actualizado (Modo Demostración)');
 
         } catch (err) {
@@ -182,27 +220,158 @@ class TrelloWorkloadApp {
     async fetchDirectFromTrello() {
         const key = encodeURIComponent(this.apiKey);
         const token = encodeURIComponent(this.apiToken);
-        const board = encodeURIComponent(this.boardId);
+        const auth = `key=${key}&token=${token}`;
 
-        const [boardRes, listsRes, cardsRes, membersRes] = await Promise.all([
-            fetch(`https://api.trello.com/1/boards/${board}?fields=name,desc,url&key=${key}&token=${token}`),
-            fetch(`https://api.trello.com/1/boards/${board}/lists?fields=name,closed,pos&key=${key}&token=${token}`),
-            fetch(`https://api.trello.com/1/boards/${board}/cards?fields=name,desc,idList,idMembers,labels,due,dueComplete,dateLastActivity,url&key=${key}&token=${token}`),
-            fetch(`https://api.trello.com/1/boards/${board}/members?fields=fullName,username,avatarUrl,initials&key=${key}&token=${token}`)
-        ]);
+        // 1. Descubrir los tableros de cada área entre los accesibles con este token
+        const targets = [{ id: this.boardId, area: null, isMain: true }];
+        try {
+            const res = await fetch(`https://api.trello.com/1/members/me/boards?filter=open&fields=name,shortLink&${auth}`);
+            if (res.ok) {
+                const myBoards = await res.json();
+                myBoards.forEach(b => {
+                    if (b.id === this.boardId || b.shortLink === this.boardId) return;
+                    const n = normalizeText(b.name);
+                    const areaKey = Object.keys(AREAS).find(k => (AREAS[k].boards || []).some(p => n.includes(p)));
+                    if (areaKey) targets.push({ id: b.id, area: areaKey, isMain: false });
+                });
+            }
+        } catch (ignore) {}
 
-        if (!boardRes.ok || !listsRes.ok || !cardsRes.ok || !membersRes.ok) {
-            throw new Error('No se pudo autenticar con Trello. Verifique API Key y Token.');
+        // 2. Descargar cada tablero (lists, cards y members en una sola llamada)
+        const boardQuery = 'fields=name,desc,url,shortLink&lists=open&list_fields=name,closed,pos'
+            + '&cards=open&card_fields=name,desc,idList,idMembers,labels,due,dueComplete,dateLastActivity,url'
+            + '&members=all&member_fields=fullName,username,avatarUrl,initials';
+
+        const payloads = await Promise.all(targets.map(async t => {
+            try {
+                const res = await fetch(`https://api.trello.com/1/boards/${encodeURIComponent(t.id)}?${boardQuery}&${auth}`);
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                return { target: t, board: await res.json() };
+            } catch (err) {
+                if (t.isMain) throw new Error('No se pudo autenticar con Trello. Verifique API Key y Token.');
+                console.warn('No se pudo leer el tablero', t.id, err);
+                return null;
+            }
+        }));
+
+        // 3. Unificar datos de todos los tableros
+        const raw = { mainBoard: null, boards: [], lists: [], cards: [], members: [], source: 'trello_live' };
+        const memberIndex = {};
+
+        payloads.filter(Boolean).forEach(({ target, board }) => {
+            const boardInfo = {
+                id: board.id,
+                name: board.name,
+                url: board.url,
+                area: target.area,
+                isMain: target.isMain,
+                memberIds: (board.members || []).map(m => m.id)
+            };
+            raw.boards.push(boardInfo);
+            if (target.isMain) raw.mainBoard = { id: board.id, name: board.name, desc: board.desc, url: board.url };
+
+            (board.lists || []).forEach(l => raw.lists.push({ ...l, idBoard: board.id, boardName: board.name }));
+
+            (board.members || []).forEach(m => {
+                if (!memberIndex[m.id]) {
+                    memberIndex[m.id] = true;
+                    raw.members.push(m);
+                }
+            });
+
+            (board.cards || []).forEach(c => {
+                raw.cards.push({
+                    ...c,
+                    idBoard: board.id,
+                    boardName: board.name,
+                    areas: this.detectCardAreas(c, target.area)
+                });
+            });
+        });
+
+        return raw;
+    }
+
+    detectCardAreas(card, boardArea) {
+        if (boardArea) return [boardArea];
+        const labelNames = (card.labels || []).map(l => normalizeText(l.name));
+        return Object.keys(AREAS).filter(k =>
+            (AREAS[k].labels || []).some(p => labelNames.some(n => n.includes(p)))
+        );
+    }
+
+    setArea(area) {
+        this.activeArea = AREAS[area] ? area : 'general';
+        this.applyArea();
+    }
+
+    // Construye la vista (this.data) a partir de los datos crudos, según el área seleccionada
+    applyArea() {
+        if (!this.raw) {
+            this.updateAreaUI();
+            this.render();
+            return;
         }
 
-        const [boardData, listsData, cardsData, membersData] = await Promise.all([
-            boardRes.json(),
-            listsRes.json(),
-            cardsRes.json(),
-            membersRes.json()
-        ]);
+        const raw = this.raw;
+        const area = this.activeArea;
+        let { cards, lists, members } = raw;
 
-        return this.processTrelloPayload(boardData, listsData, cardsData, membersData, 'trello_live');
+        if (area !== 'general') {
+            const areaBoards = raw.boards.filter(b => b.area === area);
+            cards = cards.filter(c => (c.areas || []).includes(area));
+
+            const usedLists = new Set(cards.map(c => c.idList));
+            const areaBoardIds = new Set(areaBoards.map(b => b.id));
+            lists = lists.filter(l => usedLists.has(l.id) || areaBoardIds.has(l.idBoard));
+
+            const memberIds = new Set();
+            cards.forEach(c => (c.idMembers || []).forEach(id => memberIds.add(id)));
+            areaBoards.forEach(b => b.memberIds.forEach(id => memberIds.add(id)));
+            members = members.filter(m => memberIds.has(m.id));
+        }
+
+        const mainBoard = raw.mainBoard || { id: this.boardId };
+        this.data = this.processTrelloPayload(mainBoard, lists, cards, members, raw.source || 'trello_live');
+        this.data.multiBoard = raw.boards.length > 1;
+        if (raw.notice) this.data.meta.notice = raw.notice;
+
+        this.updateHeaderAndKPIs();
+        this.updateAreaUI();
+        this.render();
+    }
+
+    updateAreaUI() {
+        const area = this.activeArea;
+        const title = document.getElementById('cards-section-title');
+        const notice = document.getElementById('area-notice');
+        if (title) {
+            title.textContent = area === 'general'
+                ? 'Carga de Trabajo por Integrante'
+                : `Carga de Trabajo por Integrante · ${AREAS[area].label}`;
+        }
+        if (!notice) return;
+
+        if (area === 'general' || !this.raw) {
+            const extra = this.raw ? this.raw.boards.filter(b => !b.isMain).map(b => b.name) : [];
+            notice.style.display = extra.length ? 'block' : 'none';
+            notice.textContent = extra.length ? `Tableros incluidos: ${[this.raw.mainBoard?.name, ...extra].filter(Boolean).join(' · ')}` : '';
+            return;
+        }
+
+        const found = this.raw.boards.filter(b => b.area === area).map(b => b.name);
+        const missing = (BOARD_DISPLAY_NAMES[area] || []).filter(name => {
+            const n = normalizeText(name);
+            return !found.some(f => normalizeText(f).includes(n) || n.includes(normalizeText(f)));
+        });
+
+        let text = found.length ? `Tableros: ${found.join(' · ')}. ` : '';
+        text += 'Incluye tarjetas del tablero principal con la etiqueta del área.';
+        if (missing.length) {
+            text += ` Sin acceso todavía a: ${missing.join(', ')} (la cuenta conectada debe ser miembro de esos tableros).`;
+        }
+        notice.textContent = text;
+        notice.style.display = 'block';
     }
 
     processTrelloPayload(board, lists, cards, members, source = 'trello_live') {
@@ -281,6 +450,8 @@ class TrelloWorkloadApp {
                     color: l.color || 'sky'
                 })),
                 url: card.url || '#',
+                boardName: card.boardName || '',
+                areas: card.areas || [],
                 dateLastActivity: card.dateLastActivity || null
             };
 
@@ -710,7 +881,7 @@ class TrelloWorkloadApp {
 
             col.innerHTML = `
                 <div class="kanban-column-header">
-                    <span class="kanban-column-title">${this.escapeHtml(list.name)}</span>
+                    <span class="kanban-column-title">${this.escapeHtml(list.name)}${this.data.multiBoard && list.boardName ? `<small class="kanban-board-name">${this.escapeHtml(list.boardName)}</small>` : ''}</span>
                     <span class="kanban-column-count">${listCards.length}</span>
                 </div>
                 <div class="kanban-cards">
@@ -756,6 +927,7 @@ class TrelloWorkloadApp {
                         <span class="task-mini-stage">${this.escapeHtml(card.listName)}</span>
                     </div>
                     ${card.desc ? `<div class="modal-task-desc">${this.escapeHtml(card.desc)}</div>` : ''}
+                    ${this.data.multiBoard && card.boardName ? `<div class="modal-task-board">Tablero: ${this.escapeHtml(card.boardName)}</div>` : ''}
                     <div class="modal-task-meta">
                         <div class="task-labels-wrap">
                             ${labelsHtml || '<span style="color: var(--text-muted); font-size: 0.74rem;">Sin etiquetas</span>'}
@@ -923,9 +1095,16 @@ class TrelloWorkloadApp {
             url: `https://trello.com/b/${this.boardId}/div-gestion-de-la-informacion-y-comunicacion-institucional`
         };
 
-        const processed = this.processTrelloPayload(boardInfo, demoLists, demoCards, demoMembers, 'demo_dataset');
-        processed.meta.notice = 'Mostrando datos de la división. Ingrese su API Key y Token en Ajustes para sincronizar en vivo con Trello.';
-        return processed;
+        const cardsWithAreas = demoCards.map(c => ({ ...c, areas: this.detectCardAreas(c, null) }));
+        return {
+            mainBoard: boardInfo,
+            boards: [{ id: boardInfo.id, name: boardInfo.name, url: boardInfo.url, area: null, isMain: true, memberIds: demoMembers.map(m => m.id) }],
+            lists: demoLists,
+            cards: cardsWithAreas,
+            members: demoMembers,
+            source: 'demo_dataset',
+            notice: 'Mostrando datos de la división. Ingrese su API Key y Token en Ajustes para sincronizar en vivo con Trello.'
+        };
     }
 }
 

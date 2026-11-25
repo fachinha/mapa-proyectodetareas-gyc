@@ -502,6 +502,81 @@ button {
     box-shadow: 0 2px 10px rgba(234, 88, 12, 0.3);
 }
 
+/* Selector de área */
+.area-tabs {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.area-tab {
+    min-height: 52px;
+    padding: 12px 16px;
+    border-radius: var(--radius-md);
+    font-family: var(--font-heading);
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-card);
+    cursor: pointer;
+    transition: var(--transition-smooth);
+}
+
+.area-tab:hover {
+    transform: translateY(-2px);
+    color: var(--accent-orange-dark);
+    border-color: #FDBA74;
+    background: #FFF7ED;
+}
+
+.area-tab:active {
+    transform: scale(0.96);
+}
+
+.area-tab.active {
+    color: #FFFFFF;
+    background: linear-gradient(120deg, var(--accent-orange-dark), var(--accent-orange), var(--accent-orange-light));
+    border-color: var(--accent-orange);
+    box-shadow: 0 6px 18px rgba(234, 88, 12, 0.28);
+}
+
+.area-notice {
+    margin-top: 8px;
+    padding: 10px 14px;
+    font-size: 0.85rem;
+    color: var(--status-high-text);
+    background: var(--status-high-bg);
+    border: 1px solid var(--status-high-border);
+    border-radius: var(--radius-sm);
+}
+
+.kanban-board-name {
+    display: block;
+    font-size: 0.7rem;
+    font-weight: 500;
+    color: var(--text-muted);
+}
+
+.modal-task-board {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--accent-orange-dark);
+    margin-bottom: 8px;
+}
+
+@media (max-width: 768px) {
+    .area-tabs {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .area-tab {
+        font-size: 0.9rem;
+        min-height: 48px;
+    }
+}
+
 .view-tabs {
     display: flex;
     background: #F1F5F9;

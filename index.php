@@ -151,6 +151,14 @@ $config = get_app_config();
             </div>
         </div>
 
+        <!-- SELECTOR DE ÁREA -->
+        <nav class="area-tabs" id="area-tabs" aria-label="Filtrar por área">
+            <button class="area-tab active" data-area="general">General</button>
+            <button class="area-tab" data-area="empleo">Empleo</button>
+            <button class="area-tab" data-area="capacitaciones">Capacitaciones</button>
+            <button class="area-tab" data-area="pymes">Emprendimientos y Pymes</button>
+        </nav>
+
         <!-- BARRA DE CONTROLES Y FILTROS -->
         <div class="controls-bar">
             <div class="search-box">
@@ -201,8 +209,9 @@ $config = get_app_config();
         <!-- CONTENIDO PRINCIPAL: VISTA DE INTEGRANTES (DEFAULT) -->
         <div id="view-cards-container">
             <div class="section-header">
-                <h2>Carga de Trabajo por Integrante</h2>
+                <h2 id="cards-section-title">Carga de Trabajo por Integrante</h2>
                 <p>Nivel de ocupación en base a proyectos asignados y capacidad operativa recomendada.</p>
+                <p class="area-notice" id="area-notice" style="display: none;"></p>
             </div>
 
             <div class="members-grid" id="members-cards-grid">
