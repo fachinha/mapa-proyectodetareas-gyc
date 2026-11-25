@@ -1,0 +1,12 @@
+# Dependencias y cachés
+cache/
+*.log
+
+# Archivos de configuración local con credenciales
+config.json
+config.local.php
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+desktop.ini
