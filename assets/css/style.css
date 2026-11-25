@@ -729,6 +729,294 @@ button {
     }
 }
 
+/* Separador de miembros externos y tarjetas de solicitantes */
+.external-section-separator {
+    grid-column: 1 / -1;
+    margin: 36px 0 16px 0;
+    padding: 18px 24px;
+    background: #F8FAFC;
+    border: 1px dashed #CBD5E1;
+    border-radius: var(--radius-lg);
+}
+
+.external-separator-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.external-separator-content h3 {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0 0 4px 0;
+}
+
+.external-separator-content p {
+    font-size: 0.84rem;
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+.external-count-badge {
+    padding: 6px 12px;
+    background: #E2E8F0;
+    color: var(--text-secondary);
+    font-size: 0.78rem;
+    font-weight: 700;
+    border-radius: var(--radius-full);
+}
+
+.member-card-external {
+    opacity: 0.88;
+    background: #FAFAFA;
+    border-color: #E2E8F0;
+}
+
+.member-card-external:hover {
+    opacity: 1;
+}
+
+.external-role-tag {
+    display: inline-block;
+    padding: 3px 8px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #475569;
+    background: #E2E8F0;
+    border-radius: var(--radius-sm);
+    margin-bottom: 12px;
+}
+
+/* ==========================================================================
+   DASHBOARD DE ANALÍTICA Y RESOLUCIÓN
+   ========================================================================== */
+.analytics-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.analytics-kpis-row {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.analytics-card-kpi {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 22px;
+    box-shadow: var(--shadow-card);
+}
+
+.analytics-card-kpi.highlight {
+    border-color: var(--accent-orange-light);
+    background: #FFFDFB;
+}
+
+.analytics-kpi-sub {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    display: block;
+    margin-bottom: 8px;
+}
+
+.analytics-card-kpi.highlight .analytics-kpi-sub {
+    color: var(--accent-orange-dark);
+}
+
+.analytics-kpi-num {
+    font-size: 2.2rem;
+    font-weight: 800;
+    font-family: var(--font-heading);
+    color: var(--text-primary);
+    line-height: 1.1;
+    margin-bottom: 8px;
+}
+
+.analytics-card-kpi.highlight .analytics-kpi-num {
+    color: var(--accent-orange);
+}
+
+.analytics-kpi-desc {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+.analytics-details-grid {
+    display: grid;
+    grid-template-columns: 3fr 2fr;
+    gap: 20px;
+}
+
+.analytics-box {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 24px;
+    box-shadow: var(--shadow-card);
+}
+
+.analytics-box-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+}
+
+.analytics-box-head h3 {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.analytics-box-head span {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+}
+
+/* Gráfico de barras simple CSS */
+.analytics-chart-container {
+    display: flex;
+    align-items: flex-end;
+    gap: 14px;
+    height: 180px;
+    padding-top: 20px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.analytics-bar-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    height: 100%;
+}
+
+.analytics-bar-track {
+    width: 100%;
+    max-width: 42px;
+    flex: 1;
+    display: flex;
+    align-items: flex-end;
+    background: #F1F5F9;
+    border-radius: 6px 6px 0 0;
+    overflow: hidden;
+}
+
+.analytics-bar-fill {
+    width: 100%;
+    background: linear-gradient(180deg, var(--accent-orange-light), var(--accent-orange));
+    border-radius: 6px 6px 0 0;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: 4px;
+    transition: height 0.3s ease;
+}
+
+.analytics-bar-val {
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #FFFFFF;
+}
+
+.analytics-bar-lbl {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-top: 8px;
+    white-space: nowrap;
+}
+
+/* Rendimiento por usuario */
+.team-perf-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.team-perf-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    background: #F8FAFC;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+}
+
+.team-perf-user {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.team-perf-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: var(--radius-full);
+    background: var(--accent-orange-tint);
+    color: var(--accent-orange-dark);
+    font-size: 0.75rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.team-perf-name {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.team-perf-metrics {
+    display: flex;
+    gap: 8px;
+}
+
+.perf-metric-badge {
+    font-size: 0.76rem;
+    font-weight: 700;
+    padding: 4px 8px;
+    border-radius: var(--radius-sm);
+}
+
+.perf-metric-badge.done {
+    background: #DCFCE7;
+    color: #166534;
+}
+
+.perf-metric-badge.active {
+    background: #FFF7ED;
+    color: #9A3412;
+}
+
+@media (max-width: 992px) {
+    .analytics-kpis-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .analytics-details-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 576px) {
+    .analytics-kpis-row {
+        grid-template-columns: 1fr;
+    }
+}
+
 .view-tabs {
     display: flex;
     background: #F1F5F9;

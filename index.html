@@ -208,6 +208,15 @@
                     </svg>
                     <span>Por Etapas</span>
                 </button>
+                <button class="view-tab" data-view="analytics">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="20" x2="18" y2="10"></line>
+                        <line x1="12" y1="20" x2="12" y2="4"></line>
+                        <line x1="6" y1="20" x2="6" y2="14"></line>
+                        <circle cx="12" cy="4" r="2"></circle>
+                    </svg>
+                    <span>Rendimiento y Tiempos</span>
+                </button>
             </div>
         </div>
 
@@ -245,6 +254,30 @@
             </div>
 
             <div class="kanban-view" id="kanban-columns-container">
+                <!-- Se inyecta dinámicamente mediante app.js -->
+            </div>
+        </div>
+
+        <!-- CONTENIDO PRINCIPAL: ANÁLISIS DE RESOLUCIÓN Y RENDIMIENTO -->
+        <div id="view-analytics-container" style="display: none;">
+            <div class="section-header">
+                <h2>Análisis de Productividad y Resolución</h2>
+                <p>Métricas históricas y recientes de tareas terminadas según lapsos de tiempo y áreas.</p>
+            </div>
+
+            <div class="analytics-dashboard" id="analytics-dashboard-container">
+                <!-- Se inyecta dinámicamente mediante app.js -->
+            </div>
+        </div>
+
+        <!-- CONTENIDO PRINCIPAL: ANÁLISIS DE RESOLUCIÓN Y RENDIMIENTO -->
+        <div id="view-analytics-container" style="display: none;">
+            <div class="section-header">
+                <h2>Análisis de Productividad y Resolución</h2>
+                <p>Métricas históricas y recientes de tareas terminadas según lapsos de tiempo y áreas.</p>
+            </div>
+
+            <div class="analytics-dashboard" id="analytics-dashboard-container">
                 <!-- Se inyecta dinámicamente mediante app.js -->
             </div>
         </div>

@@ -32,6 +32,25 @@ const BOARD_DISPLAY_NAMES = {
 
 const normalizeText = (s) => (s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
 
+// Integrantes del área central de trabajo (Vero, Jere, Fer, Jes, Pol, Lucas y cuenta Auxiliar GyC)
+const CORE_TEAM_MATCHERS = [
+    'veronica', 'huenteneao',
+    'jeremias', 'jere', 'fox',
+    'fernando', 'sepulveda', 'fer',
+    'jessica', 'morais', 'jez', 'jes',
+    'pol', 'pollozano',
+    'lucas', 'lukitas', 'hartung',
+    'auxiliar gestion de la informacion', 'auxiliargestion'
+];
+
+function isCoreTeamMember(member) {
+    if (!member) return false;
+    if (member.isUnassignedPool) return true; // Mantener visible en área central
+    const full = normalizeText(member.fullName || '');
+    const user = normalizeText(member.username || '');
+    return CORE_TEAM_MATCHERS.some(matcher => full.includes(matcher) || user.includes(matcher));
+}
+
 class TrelloWorkloadApp {
     constructor() {
         this.data = null;
@@ -80,6 +99,8 @@ class TrelloWorkloadApp {
         this.viewCardsContainer = document.getElementById('view-cards-container');
         this.viewMatrixContainer = document.getElementById('view-matrix-container');
         this.viewKanbanContainer = document.getElementById('view-kanban-container');
+        this.viewAnalyticsContainer = document.getElementById('view-analytics-container');
+        this.analyticsDashboardContainer = document.getElementById('analytics-dashboard-container');
 
         // Modales
         this.memberModal = document.getElementById('member-detail-modal');
@@ -673,6 +694,9 @@ class TrelloWorkloadApp {
         this.viewCardsContainer.style.display = viewName === 'cards' ? 'block' : 'none';
         this.viewMatrixContainer.style.display = viewName === 'matrix' ? 'block' : 'none';
         this.viewKanbanContainer.style.display = viewName === 'kanban' ? 'block' : 'none';
+        if (this.viewAnalyticsContainer) {
+            this.viewAnalyticsContainer.style.display = viewName === 'analytics' ? 'block' : 'none';
+        }
         this.render();
     }
 
@@ -739,6 +763,8 @@ class TrelloWorkloadApp {
             this.renderMatrixView();
         } else if (this.currentView === 'kanban') {
             this.renderKanbanView();
+        } else if (this.currentView === 'analytics') {
+            this.renderAnalyticsView();
         }
     }
 
@@ -755,9 +781,13 @@ class TrelloWorkloadApp {
             return;
         }
 
-        members.forEach(member => {
+        // Separar equipo central (Vero, Jere, Fer, Jes, Pol, Lucas) de creadores / solicitantes externos
+        const coreMembers = members.filter(m => isCoreTeamMember(m));
+        const externalMembers = members.filter(m => !isCoreTeamMember(m));
+
+        const createMemberCardElement = (member, isExternal = false) => {
             const cardEl = document.createElement('div');
-            cardEl.className = `member-card ${member.workload.badge_class}`;
+            cardEl.className = `member-card ${member.workload.badge_class} ${isExternal ? 'member-card-external' : ''}`;
 
             const avatarHtml = member.avatarUrl
                 ? `<div class="member-avatar" style="background-image: url('${member.avatarUrl}');"></div>`
@@ -825,9 +855,15 @@ class TrelloWorkloadApp {
                         </div>
                     </div>
 
+                    ${isExternal ? `
+                        <div class="external-role-tag">
+                            <span>Solicitante / Creador Externo</span>
+                        </div>
+                    ` : ''}
+
                     <div class="capacity-box">
                         <div class="capacity-header">
-                            <span class="capacity-title">Ocupación estimada</span>
+                            <span class="capacity-title">${isExternal ? 'Tarjetas asociadas' : 'Ocupación estimada'}</span>
                             <span class="capacity-score">${member.stats.active} tareas (${member.workload.percentage}%)</span>
                         </div>
                         <div class="capacity-bar-track">
@@ -857,9 +893,33 @@ class TrelloWorkloadApp {
                     </button>
                 </div>
             `;
+            return cardEl;
+        };
 
-            this.cardsGrid.appendChild(cardEl);
+        // 1. Integrantes del Equipo Directo (Vero, Jere, Fer, Jes, Pol, Lucas)
+        coreMembers.forEach(member => {
+            this.cardsGrid.appendChild(createMemberCardElement(member, false));
         });
+
+        // 2. Sección separada para Solicitantes / Creadores externos
+        if (externalMembers.length > 0) {
+            const separator = document.createElement('div');
+            separator.className = 'external-section-separator';
+            separator.innerHTML = `
+                <div class="external-separator-content">
+                    <div>
+                        <h3>Creadores de tarjetas y solicitantes externos</h3>
+                        <p>Cuentas institucionales y de otras áreas encargadas de cargar requerimientos. No forman parte operativa de la división.</p>
+                    </div>
+                    <span class="external-count-badge">${externalMembers.length} externos</span>
+                </div>
+            `;
+            this.cardsGrid.appendChild(separator);
+
+            externalMembers.forEach(member => {
+                this.cardsGrid.appendChild(createMemberCardElement(member, true));
+            });
+        }
     }
 
     renderMatrixView() {
@@ -963,6 +1023,160 @@ class TrelloWorkloadApp {
 
             this.kanbanContainer.appendChild(col);
         });
+    }
+
+    renderAnalyticsView() {
+        if (!this.analyticsDashboardContainer) return;
+        this.analyticsDashboardContainer.innerHTML = '';
+
+        if (!this.raw) {
+            this.analyticsDashboardContainer.innerHTML = `
+                <div style="text-align: center; padding: 48px; background: var(--bg-surface); border-radius: var(--radius-lg); border: 1px solid var(--border-color);">
+                    <p style="color: var(--text-secondary);">Cargando analítica de tareas...</p>
+                </div>
+            `;
+            return;
+        }
+
+        // Obtener todas las tarjetas resueltas / completadas de los tableros analizados
+        const areaSubset = this.getAreaSubset(this.activeArea);
+        const cards = areaSubset.cards || [];
+        const doneCards = cards.filter(c => c.isDone);
+
+        // Agrupar por lapsos de tiempo
+        const now = new Date();
+        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+        const startOf7Days = now.getTime() - (7 * 86400000);
+        const startOf30Days = now.getTime() - (30 * 86400000);
+        const startOf90Days = now.getTime() - (90 * 86400000);
+
+        let resolved7d = 0;
+        let resolved30d = 0;
+        let resolved90d = 0;
+
+        // Histórico por meses (ej. Nov 2026, Oct 2026...)
+        const monthlyStats = {};
+
+        doneCards.forEach(c => {
+            const cardDate = c.dateLastActivity ? new Date(c.dateLastActivity).getTime() : null;
+            if (cardDate) {
+                if (cardDate >= startOf7Days) resolved7d++;
+                if (cardDate >= startOf30Days) resolved30d++;
+                if (cardDate >= startOf90Days) resolved90d++;
+
+                const d = new Date(cardDate);
+                const monthKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+                monthlyStats[monthKey] = (monthlyStats[monthKey] || 0) + 1;
+            }
+        });
+
+        const sortedMonths = Object.keys(monthlyStats).sort().reverse().slice(0, 8);
+        const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+
+        const maxMonthly = Math.max(...sortedMonths.map(m => monthlyStats[m]), 1);
+
+        const barsHtml = sortedMonths.map(mKey => {
+            const [y, m] = mKey.split('-');
+            const label = `${monthNames[parseInt(m, 10) - 1]} ${y}`;
+            const count = monthlyStats[mKey];
+            const pct = Math.round((count / maxMonthly) * 100);
+
+            return `
+                <div class="analytics-bar-item">
+                    <div class="analytics-bar-track">
+                        <div class="analytics-bar-fill" style="height: ${Math.max(pct, 12)}%;">
+                            <span class="analytics-bar-val">${count}</span>
+                        </div>
+                    </div>
+                    <span class="analytics-bar-lbl">${label}</span>
+                </div>
+            `;
+        }).join('');
+
+        // Resolución por integrante del equipo
+        const coreMembersStats = (areaSubset.members || [])
+            .filter(m => isCoreTeamMember(m))
+            .map(m => {
+                const memberDone = cards.filter(c => c.isDone && (c.idMembers || []).includes(m.id));
+                const memberActive = cards.filter(c => !c.isDone && (c.idMembers || []).includes(m.id));
+                return {
+                    name: m.fullName,
+                    initials: m.initials,
+                    done: memberDone.length,
+                    active: memberActive.length,
+                    total: memberDone.length + memberActive.length
+                };
+            })
+            .sort((a, b) => b.done - a.done);
+
+        const teamPerformanceHtml = coreMembersStats.map(stat => `
+            <div class="team-perf-row">
+                <div class="team-perf-user">
+                    <span class="team-perf-avatar">${this.escapeHtml(stat.initials)}</span>
+                    <span class="team-perf-name">${this.escapeHtml(stat.name)}</span>
+                </div>
+                <div class="team-perf-metrics">
+                    <span class="perf-metric-badge done">✓ ${stat.done} resueltas</span>
+                    <span class="perf-metric-badge active">⚡ ${stat.active} en curso</span>
+                </div>
+            </div>
+        `).join('');
+
+        const dashboardEl = document.createElement('div');
+        dashboardEl.className = 'analytics-grid';
+        dashboardEl.innerHTML = `
+            <!-- TARJETAS DE LAPSOS DE TIEMPO -->
+            <div class="analytics-kpis-row">
+                <div class="analytics-card-kpi">
+                    <span class="analytics-kpi-sub">Últimos 7 días</span>
+                    <div class="analytics-kpi-num">${resolved7d}</div>
+                    <p class="analytics-kpi-desc">Tareas entregadas y cerradas en la última semana.</p>
+                </div>
+
+                <div class="analytics-card-kpi highlight">
+                    <span class="analytics-kpi-sub">Últimos 30 días</span>
+                    <div class="analytics-kpi-num">${resolved30d}</div>
+                    <p class="analytics-kpi-desc">Producción resuelta durante el último mes.</p>
+                </div>
+
+                <div class="analytics-card-kpi">
+                    <span class="analytics-kpi-sub">Últimos 90 días (Trimestre)</span>
+                    <div class="analytics-kpi-num">${resolved90d}</div>
+                    <p class="analytics-kpi-desc">Total acumulado resuelto en el último trimestre.</p>
+                </div>
+
+                <div class="analytics-card-kpi">
+                    <span class="analytics-kpi-sub">Histórico Total Resuelto</span>
+                    <div class="analytics-kpi-num">${doneCards.length}</div>
+                    <p class="analytics-kpi-desc">Todas las tarjetas archivadas o en listas de terminado.</p>
+                </div>
+            </div>
+
+            <!-- GRÁFICO HISTÓRICO Y RENDIMIENTO DEL EQUIPO -->
+            <div class="analytics-details-grid">
+                <div class="analytics-box">
+                    <div class="analytics-box-head">
+                        <h3>Tarjetas resueltas por mes</h3>
+                        <span>Historial consolidado</span>
+                    </div>
+                    <div class="analytics-chart-container">
+                        ${barsHtml || '<p style="color: var(--text-muted); text-align: center; padding: 24px;">Sin datos históricos disponibles para este filtro.</p>'}
+                    </div>
+                </div>
+
+                <div class="analytics-box">
+                    <div class="analytics-box-head">
+                        <h3>Resolución por integrante del equipo</h3>
+                        <span>Tareas completadas vs en curso</span>
+                    </div>
+                    <div class="team-perf-list">
+                        ${teamPerformanceHtml || '<p style="color: var(--text-muted); text-align: center; padding: 24px;">Sin integrantes registrados.</p>'}
+                    </div>
+                </div>
+            </div>
+        `;
+
+        this.analyticsDashboardContainer.appendChild(dashboardEl);
     }
 
     openMemberModal(memberId) {
