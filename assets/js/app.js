@@ -44,8 +44,13 @@ class TrelloWorkloadApp {
 
         // Configuración en cliente
         this.boardId = localStorage.getItem('trello_board_id') || '3X5asYe2';
-        this.apiKey = localStorage.getItem('trello_api_key') || 'b965fb95cbe116da68a5e88b85123d71';
-        this.apiToken = localStorage.getItem('trello_api_token') || 'ATTA45910e33bc9e653ebb9831925aaa17aa40912fcb759e47152133f1e70e27ce00DFA2F046';
+        // Credenciales por defecto (cuenta con acceso a los tableros de todas las áreas)
+        const DEFAULT_KEY = 'e9a19f646cbd6d89b0226c9552b850b4';
+        const DEFAULT_TOKEN = 'ATTA012d2cead40358b05c1eead8855cf4c084318b54992248ae5c72b6906d3b0e6cB276DF46';
+        const storedKey = localStorage.getItem('trello_api_key');
+        const useStored = storedKey && storedKey !== 'b965fb95cbe116da68a5e88b85123d71';
+        this.apiKey = useStored ? storedKey : DEFAULT_KEY;
+        this.apiToken = useStored ? (localStorage.getItem('trello_api_token') || DEFAULT_TOKEN) : DEFAULT_TOKEN;
 
         this.initElements();
         this.bindEvents();
