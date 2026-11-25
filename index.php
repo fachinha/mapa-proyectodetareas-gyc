@@ -60,7 +60,7 @@ $config = get_app_config();
                     <span>Ajustes API</span>
                 </button>
 
-                <a href="<?php echo htmlspecialchars($config['board_url']); ?>" target="_blank" rel="noopener noreferrer" class="btn btn-outline" title="Abrir tablero en Trello">
+                <a id="btn-header-trello-link" href="https://trello.com/b/3X5asYe2/div-gestion-de-la-informacion-y-comunicacion-institucional" target="_blank" rel="noopener noreferrer" class="btn btn-outline" title="Abrir tablero en Trello">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path>
                         <polyline points="15 3 21 3 21 9"></polyline>
@@ -200,7 +200,6 @@ $config = get_app_config();
 
         <!-- CONTENIDO PRINCIPAL: VISTA DE INTEGRANTES (DEFAULT) -->
         <div id="view-cards-container">
-            <!-- Cumplimiento estricto: SIN eyebrow tags ni pastillas arriba del h2 -->
             <div class="section-header">
                 <h2>Carga de Trabajo por Integrante</h2>
                 <p>Nivel de ocupación en base a proyectos asignados y capacidad operativa recomendada.</p>
@@ -305,33 +304,33 @@ $config = get_app_config();
                 <div class="config-step">
                     <div class="step-header">
                         <span class="step-num">1</span>
-                        <span>Obtener Clave API y Token de Trello</span>
+                        <span>Autorizar lectura con tu cuenta institucional</span>
                     </div>
                     <p>
-                        Inicie sesión con su cuenta institucional en Trello y acceda a 
-                        <a href="https://trello.com/app-key" target="_blank" rel="noopener noreferrer" style="color: #38BDF8; font-weight: 600; text-decoration: underline;">
-                            trello.com/app-key
-                        </a>. 
-                        Copie la <strong>Clave API</strong> y haga clic en <em>"Token"</em> para generar el código de autorización de lectura.
+                        Tu Clave API ya está configurada. Para obtener tu <strong>Token</strong> de acceso, haz clic en el siguiente botón, presiona <strong>"Permitir"</strong> y copia el código que te mostrará Trello:
                     </p>
+                    <a href="https://trello.com/1/authorize?expiration=never&name=MapaTareasGyC&scope=read&response_type=token&key=b965fb95cbe116da68a5e88b85123d71" target="_blank" rel="noopener noreferrer" class="btn btn-primary" style="margin-top: 12px; width: 100%;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><polyline points="10 17 15 12 10 7"></polyline><line x1="15" y1="12" x2="3" y2="12"></line></svg>
+                        <span>Abrir ventana para generar Token</span>
+                    </a>
                 </div>
 
                 <form id="settings-form" onsubmit="app.handleSaveSettings(event)">
                     <div class="form-group">
                         <label class="form-label" for="setting-board-id">ID o Código del Tablero</label>
-                        <input type="text" id="setting-board-id" class="form-control" value="<?php echo htmlspecialchars($config['board_id']); ?>" placeholder="Ej: 3X5asYe2" required>
+                        <input type="text" id="setting-board-id" class="form-control" value="3X5asYe2" placeholder="Ej: 3X5asYe2" required>
                         <div class="form-help">Identificador del tablero en la URL de Trello (3X5asYe2).</div>
                     </div>
 
                     <div class="form-group">
                         <label class="form-label" for="setting-api-key">Trello API Key (Clave Pública)</label>
-                        <input type="text" id="setting-api-key" class="form-control" value="<?php echo htmlspecialchars($config['api_key']); ?>" placeholder="Pegue aquí su API Key de 32 caracteres" autocomplete="off">
+                        <input type="text" id="setting-api-key" class="form-control" value="b965fb95cbe116da68a5e88b85123d71" placeholder="Pegue aquí su API Key de 32 caracteres" autocomplete="off">
                     </div>
 
                     <div class="form-group">
                         <label class="form-label" for="setting-api-token">Trello Token (Autorización)</label>
-                        <input type="password" id="setting-api-token" class="form-control" value="<?php echo htmlspecialchars($config['api_token']); ?>" placeholder="Pegue aquí el Token de 64 caracteres" autocomplete="off">
-                        <div class="form-help">Permite leer de forma segura las tarjetas privadas del tablero de la división.</div>
+                        <input type="text" id="setting-api-token" class="form-control" value="" placeholder="Pegue aquí el Token generado" autocomplete="off" required>
+                        <div class="form-help">Código obtenido del botón superior para leer de forma segura las tarjetas del tablero.</div>
                     </div>
 
                     <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 24px;">

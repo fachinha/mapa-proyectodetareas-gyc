@@ -14,7 +14,7 @@ class TrelloWorkloadApp {
 
         // Configuración en cliente
         this.boardId = localStorage.getItem('trello_board_id') || '3X5asYe2';
-        this.apiKey = localStorage.getItem('trello_api_key') || '';
+        this.apiKey = localStorage.getItem('trello_api_key') || 'b965fb95cbe116da68a5e88b85123d71';
         this.apiToken = localStorage.getItem('trello_api_token') || '';
 
         this.initElements();
