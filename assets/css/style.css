@@ -778,6 +778,17 @@ button {
     transition: var(--transition-smooth);
 }
 
+.task-mini-item.is-done-item {
+    background: #F8FAFC;
+    border-color: #E2E8F0;
+    opacity: 0.85;
+}
+
+.task-mini-item.is-done-item .task-mini-name {
+    text-decoration: line-through;
+    color: var(--text-muted);
+}
+
 .task-mini-item:hover {
     background: #FFFFFF;
     border-color: var(--accent-orange-light);

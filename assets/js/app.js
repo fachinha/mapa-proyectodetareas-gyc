@@ -520,8 +520,16 @@ class TrelloWorkloadApp {
                 ? `<div class="member-avatar" style="background-image: url('${member.avatarUrl}');"></div>`
                 : `<div class="member-avatar">${this.escapeHtml(member.initials)}</div>`;
 
-            const activeCards = member.cards.filter(c => !c.isDone);
-            const previewTasks = activeCards.slice(0, 2);
+            // Ordenar: tareas activas primero (priorizando vencimientos próximos o atrasados), luego completadas; mostrar hasta 5
+            const sortedCards = [...member.cards].sort((a, b) => {
+                if (a.isDone !== b.isDone) return a.isDone ? 1 : -1;
+                if (a.dueStatus === 'overdue' && b.dueStatus !== 'overdue') return -1;
+                if (b.dueStatus === 'overdue' && a.dueStatus !== 'overdue') return 1;
+                if (a.due && b.due) return new Date(a.due) - new Date(b.due);
+                return 0;
+            });
+
+            const previewTasks = sortedCards.slice(0, 5);
 
             let tasksListHtml = '';
             if (previewTasks.length > 0) {
@@ -538,11 +546,16 @@ class TrelloWorkloadApp {
                         const colorClass = l.color ? `label-${l.color}` : '';
                         return `<span class="task-label-chip ${colorClass}">${this.escapeHtml(l.name)}</span>`;
                     }).join('');
+
+                    const stageHtml = t.isDone
+                        ? `<span class="task-mini-stage" style="background: #DCFCE7; color: #16A34A; border: 1px solid #86EFAC;">✓ ${this.escapeHtml(t.listName)}</span>`
+                        : `<span class="task-mini-stage">${this.escapeHtml(t.listName)}</span>`;
+
                     return `
-                        <div class="task-mini-item">
+                        <div class="task-mini-item ${t.isDone ? 'is-done-item' : ''}">
                             <div class="task-mini-name">${this.escapeHtml(t.name)}</div>
                             <div class="task-mini-meta">
-                                <span class="task-mini-stage">${this.escapeHtml(t.listName)}</span>
+                                ${stageHtml}
                                 ${dueHtml}
                                 ${labelsMini}
                             </div>
@@ -550,7 +563,7 @@ class TrelloWorkloadApp {
                     `;
                 }).join('');
             } else {
-                tasksListHtml = `<div style="font-size: 0.82rem; color: var(--text-muted); padding: 6px 0;">Sin tareas activas asignadas actualmente.</div>`;
+                tasksListHtml = `<div style="font-size: 0.82rem; color: var(--text-muted); padding: 8px 0;">Sin tareas asignadas actualmente.</div>`;
             }
 
             cardEl.innerHTML = `
@@ -582,7 +595,7 @@ class TrelloWorkloadApp {
 
                     <div class="member-tasks-preview">
                         <div class="preview-title">
-                            <span>Tareas prioritarias</span>
+                            <span>Tareas asignadas (${Math.min(previewTasks.length, 5)} de ${member.stats.total})</span>
                             <span class="preview-counter">${member.stats.active} activas</span>
                         </div>
                         <div class="tasks-mini-list">
