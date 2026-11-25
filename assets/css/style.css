@@ -577,6 +577,158 @@ button {
     }
 }
 
+/* Resumen por Área (Overview) */
+.area-overview-section {
+    margin-bottom: 28px;
+}
+
+.area-overview {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.area-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    box-shadow: var(--shadow-card);
+    cursor: pointer;
+    transition: var(--transition-smooth);
+    display: flex;
+    flex-direction: column;
+}
+
+.area-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-hover);
+    border-color: var(--accent-orange-light);
+}
+
+.area-card:active {
+    transform: scale(0.98);
+}
+
+.area-card.active {
+    border-color: var(--accent-orange);
+    box-shadow: 0 0 0 2px var(--accent-orange), var(--shadow-hover);
+    background: #FFFDFB;
+}
+
+.area-card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+}
+
+.area-card-head h3 {
+    font-size: 1.12rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.area-card-total {
+    font-size: 0.78rem;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: var(--radius-full);
+    background: var(--status-high-bg);
+    color: var(--accent-orange-dark);
+    border: 1px solid var(--status-high-border);
+}
+
+.area-card-boards {
+    font-size: 0.76rem;
+    color: var(--text-muted);
+    margin-bottom: 14px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.area-people {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 14px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex: 1;
+}
+
+.area-person {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 8px;
+    border-radius: var(--radius-sm);
+    background: #F8FAFC;
+    border: 1px solid var(--border-color);
+    font-size: 0.85rem;
+}
+
+.area-person-avatar {
+    width: 26px;
+    height: 26px;
+    border-radius: var(--radius-full);
+    background: var(--accent-orange-tint);
+    color: var(--accent-orange-dark);
+    font-weight: 700;
+    font-size: 0.72rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.area-person-name {
+    flex: 1;
+    font-weight: 600;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.area-person-count {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--text-muted);
+}
+
+.area-person-count.has-active {
+    color: var(--accent-orange-dark);
+}
+
+.area-person-count small {
+    font-weight: 400;
+    color: var(--text-muted);
+}
+
+.area-person-empty {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    padding: 12px 0;
+    text-align: center;
+}
+
+.area-card-foot {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    border-top: 1px dashed var(--border-color);
+    padding-top: 10px;
+    margin: 0;
+}
+
+@media (max-width: 992px) {
+    .area-overview {
+        grid-template-columns: 1fr;
+    }
+}
+
 .view-tabs {
     display: flex;
     background: #F1F5F9;

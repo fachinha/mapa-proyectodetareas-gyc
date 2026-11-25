@@ -167,7 +167,7 @@ class TrelloWorkloadApp {
             // 1. Si tenemos credenciales en el cliente (Cloudflare Pages o directo)
             if (this.apiKey && this.apiToken && this.boardId) {
                 // Revisar caché cliente en sessionStorage (5 minutos)
-                const cacheKey = `trello_raw_v2_${this.boardId}`;
+                const cacheKey = `trello_raw_v3_${this.boardId}`;
                 const cached = sessionStorage.getItem(cacheKey);
                 const cacheTime = sessionStorage.getItem(`${cacheKey}_time`);
 
@@ -276,6 +276,7 @@ class TrelloWorkloadApp {
             if (target.isMain) raw.mainBoard = { id: board.id, name: board.name, desc: board.desc, url: board.url };
 
             (board.lists || []).forEach(l => raw.lists.push({ ...l, idBoard: board.id, boardName: board.name }));
+            const openListIds = new Set((board.lists || []).map(l => l.id));
 
             (board.members || []).forEach(m => {
                 if (!memberIndex[m.id]) {
@@ -285,6 +286,8 @@ class TrelloWorkloadApp {
             });
 
             (board.cards || []).forEach(c => {
+                // Ignorar tarjetas que quedaron dentro de listas archivadas
+                if (!openListIds.has(c.idList)) return;
                 raw.cards.push({
                     ...c,
                     idBoard: board.id,
@@ -310,16 +313,9 @@ class TrelloWorkloadApp {
         this.applyArea();
     }
 
-    // Construye la vista (this.data) a partir de los datos crudos, según el área seleccionada
-    applyArea() {
-        if (!this.raw) {
-            this.updateAreaUI();
-            this.render();
-            return;
-        }
-
+    // Subconjunto de datos crudos correspondiente a un área
+    getAreaSubset(area) {
         const raw = this.raw;
-        const area = this.activeArea;
         let { cards, lists, members } = raw;
 
         if (area !== 'general') {
@@ -335,6 +331,20 @@ class TrelloWorkloadApp {
             areaBoards.forEach(b => b.memberIds.forEach(id => memberIds.add(id)));
             members = members.filter(m => memberIds.has(m.id));
         }
+        return { cards, lists, members };
+    }
+
+    // Construye la vista (this.data) a partir de los datos crudos, según el área seleccionada
+    applyArea() {
+        if (!this.raw) {
+            this.updateAreaUI();
+            this.renderAreaOverview();
+            this.render();
+            return;
+        }
+
+        const raw = this.raw;
+        const { cards, lists, members } = this.getAreaSubset(this.activeArea);
 
         const mainBoard = raw.mainBoard || { id: this.boardId };
         this.data = this.processTrelloPayload(mainBoard, lists, cards, members, raw.source || 'trello_live');
@@ -343,7 +353,64 @@ class TrelloWorkloadApp {
 
         this.updateHeaderAndKPIs();
         this.updateAreaUI();
+        this.renderAreaOverview();
         this.render();
+    }
+
+    // Panel resumen: quién está en cada área y cuántas tareas tiene
+    renderAreaOverview() {
+        const container = document.getElementById('area-overview');
+        if (!container) return;
+        if (!this.raw) {
+            container.innerHTML = '';
+            container.style.display = 'none';
+            return;
+        }
+        container.style.display = '';
+
+        const mainBoard = this.raw.mainBoard || { id: this.boardId };
+        const html = ['empleo', 'capacitaciones', 'pymes'].map(area => {
+            const subset = this.getAreaSubset(area);
+            const processed = this.processTrelloPayload(mainBoard, subset.lists, subset.cards, subset.members, 'overview');
+            const people = processed.members
+                .filter(m => m.stats.total > 0)
+                .sort((a, b) => b.stats.active - a.stats.active || b.stats.total - a.stats.total);
+            const boards = this.raw.boards.filter(b => b.area === area).map(b => b.name);
+
+            const rows = people.length
+                ? people.map(m => `
+                    <li class="area-person">
+                        <span class="area-person-avatar">${this.escapeHtml(m.initials)}</span>
+                        <span class="area-person-name">${this.escapeHtml(m.fullName)}</span>
+                        <span class="area-person-count ${m.stats.active > 0 ? 'has-active' : ''}" title="${m.stats.active} activas de ${m.stats.total} tareas">${m.stats.active}<small>/${m.stats.total}</small></span>
+                    </li>`).join('')
+                : '<li class="area-person-empty">Sin integrantes con tareas asignadas.</li>';
+
+            return `
+                <article class="area-card ${this.activeArea === area ? 'active' : ''}" data-area="${area}" tabindex="0" role="button" aria-label="Ver área ${AREAS[area].label}">
+                    <header class="area-card-head">
+                        <h3>${AREAS[area].label}</h3>
+                        <span class="area-card-total">${processed.summary.total_active} activas</span>
+                    </header>
+                    <p class="area-card-boards">${this.escapeHtml(boards.join(' · ') || 'Tablero principal (etiquetas)')}</p>
+                    <ul class="area-people">${rows}</ul>
+                    <p class="area-card-foot">${people.length} integrantes · ${processed.summary.total_cards} tareas en total</p>
+                </article>`;
+        }).join('');
+
+        container.innerHTML = html;
+        container.querySelectorAll('.area-card').forEach(card => {
+            const go = () => this.selectAreaTab(card.dataset.area);
+            card.addEventListener('click', go);
+            card.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } });
+        });
+    }
+
+    selectAreaTab(area) {
+        document.querySelectorAll('.area-tab').forEach(t => t.classList.toggle('active', t.dataset.area === area));
+        this.setArea(area);
+        const grid = document.getElementById('view-cards-container');
+        if (grid && this.currentView === 'cards') grid.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
 
     updateAreaUI() {

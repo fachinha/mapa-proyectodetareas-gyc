@@ -67,6 +67,14 @@
             </div>
         </header>
 
+        <!-- SELECTOR DE ÁREA -->
+        <nav class="area-tabs" id="area-tabs" aria-label="Filtrar por área">
+            <button class="area-tab active" data-area="general">General</button>
+            <button class="area-tab" data-area="empleo">Empleo</button>
+            <button class="area-tab" data-area="capacitaciones">Capacitaciones</button>
+            <button class="area-tab" data-area="pymes">Emprendimientos y Pymes</button>
+        </nav>
+
         <!-- BANNER DE AVISO DE CONEXIÓN (SI APLICA) -->
         <div class="alert-banner" id="banner-api-notice" style="display: none;">
             <div class="alert-content">
@@ -147,13 +155,14 @@
             </div>
         </div>
 
-        <!-- SELECTOR DE ÁREA -->
-        <nav class="area-tabs" id="area-tabs" aria-label="Filtrar por área">
-            <button class="area-tab active" data-area="general">General</button>
-            <button class="area-tab" data-area="empleo">Empleo</button>
-            <button class="area-tab" data-area="capacitaciones">Capacitaciones</button>
-            <button class="area-tab" data-area="pymes">Emprendimientos y Pymes</button>
-        </nav>
+        <!-- RESUMEN POR ÁREA -->
+        <section class="area-overview-section">
+            <div class="section-header">
+                <h2>Equipo por área</h2>
+                <p>Quién trabaja en cada área y cuántas tareas activas tiene (activas / total). Tocá un área para ver el detalle.</p>
+            </div>
+            <div class="area-overview" id="area-overview"></div>
+        </section>
 
         <!-- BARRA DE CONTROLES Y FILTROS -->
         <div class="controls-bar">
