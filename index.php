@@ -273,18 +273,6 @@ $config = get_app_config();
             </div>
         </div>
 
-        <!-- CONTENIDO PRINCIPAL: ANÁLISIS DE RESOLUCIÓN Y RENDIMIENTO -->
-        <div id="view-analytics-container" style="display: none;">
-            <div class="section-header">
-                <h2>Análisis de Productividad y Resolución</h2>
-                <p>Métricas históricas y recientes de tareas terminadas según lapsos de tiempo y áreas.</p>
-            </div>
-
-            <div class="analytics-dashboard" id="analytics-dashboard-container">
-                <!-- Se inyecta dinámicamente mediante app.js -->
-            </div>
-        </div>
-
     </div>
 
     <!-- ==========================================================================
@@ -321,9 +309,16 @@ $config = get_app_config();
                     </div>
                 </div>
 
-                <div class="section-header" style="margin-bottom: 14px;">
-                    <h3 style="font-size: 1.1rem; color: #FFFFFF; font-family: var(--font-heading);">Proyectos y Tareas Asignadas</h3>
-                    <p style="font-size: 0.82rem; color: var(--text-secondary);">Listado completo de responsabilidades en curso.</p>
+                <div class="modal-section-header">
+                    <div>
+                        <h3>Proyectos y Tareas Asignadas</h3>
+                        <p>Listado con diferenciación clara entre tareas activas e inactivas / finalizadas.</p>
+                    </div>
+                    <div class="modal-filter-tabs" id="modal-task-filter-tabs">
+                        <button class="modal-filter-tab active" data-filter="all">Todas (<span id="modal-tab-all-count">0</span>)</button>
+                        <button class="modal-filter-tab" data-filter="active">Activas (<span id="modal-tab-active-count">0</span>)</button>
+                        <button class="modal-filter-tab" data-filter="inactive">Inactivas / Resueltas (<span id="modal-tab-inactive-count">0</span>)</button>
+                    </div>
                 </div>
 
                 <div class="modal-tasks-list" id="modal-tasks-container">

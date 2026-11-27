@@ -60,6 +60,7 @@ class TrelloWorkloadApp {
         this.currentView = 'cards';
         this.searchQuery = '';
         this.selectedMember = null;
+        this.modalTaskFilter = 'all';
 
         // Configuración en cliente
         this.boardId = localStorage.getItem('trello_board_id') || '3X5asYe2';
@@ -1185,6 +1186,7 @@ class TrelloWorkloadApp {
         if (!member) return;
 
         this.selectedMember = member;
+        this.modalTaskFilter = 'all';
 
         document.getElementById('modal-member-name').textContent = member.fullName;
         document.getElementById('modal-member-username').textContent = `@${member.username}`;
@@ -1192,49 +1194,118 @@ class TrelloWorkloadApp {
         document.getElementById('modal-kpi-level').textContent = member.workload.label;
         document.getElementById('modal-kpi-completed').textContent = member.stats.completed;
 
-        const tasksContainer = document.getElementById('modal-tasks-container');
-        tasksContainer.innerHTML = '';
+        const activeCount = member.cards.filter(c => !c.isDone).length;
+        const inactiveCount = member.cards.filter(c => c.isDone).length;
 
-        if (member.cards.length === 0) {
-            tasksContainer.innerHTML = `<p style="color: var(--text-muted); padding: 20px 0; text-align: center;">Este integrante no posee tarjetas asignadas en el tablero.</p>`;
-        } else {
-            member.cards.forEach(card => {
-                const cardEl = document.createElement('div');
-                cardEl.className = 'modal-task-card';
+        const elAll = document.getElementById('modal-tab-all-count');
+        const elActive = document.getElementById('modal-tab-active-count');
+        const elInactive = document.getElementById('modal-tab-inactive-count');
+        if (elAll) elAll.textContent = member.cards.length;
+        if (elActive) elActive.textContent = activeCount;
+        if (elInactive) elInactive.textContent = inactiveCount;
 
-                const labelsHtml = (card.labels || []).map(l => {
-                    const colorClass = l.color ? `label-${l.color}` : '';
-                    return `<span class="task-label-chip ${colorClass}">${this.escapeHtml(l.name)}</span>`;
-                }).join('');
+        // Resetear pestañas de filtro del modal
+        const tabs = document.querySelectorAll('.modal-filter-tab');
+        tabs.forEach(tab => {
+            tab.classList.toggle('active', tab.dataset.filter === 'all');
+            tab.onclick = () => {
+                tabs.forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                this.modalTaskFilter = tab.dataset.filter;
+                this.renderModalTasks();
+            };
+        });
 
-                cardEl.innerHTML = `
-                    <div class="modal-task-top">
-                        <div class="modal-task-title">${this.escapeHtml(card.name)}</div>
-                        <span class="task-mini-stage">${this.escapeHtml(card.listName)}</span>
-                    </div>
-                    ${card.desc ? `<div class="modal-task-desc">${this.escapeHtml(card.desc)}</div>` : ''}
-                    ${this.data.multiBoard && card.boardName ? `<div class="modal-task-board">Tablero: ${this.escapeHtml(card.boardName)}</div>` : ''}
-                    <div class="modal-task-meta">
-                        <div class="task-labels-wrap">
-                            ${labelsHtml || '<span style="color: var(--text-muted); font-size: 0.74rem;">Sin etiquetas</span>'}
-                        </div>
-                        <div style="display: flex; align-items: center; gap: 14px;">
-                            ${card.dueFormatted ? `<span class="due-indicator ${card.dueStatus}">📅 ${card.dueFormatted}</span>` : ''}
-                            ${card.url && card.url !== '#' ? `
-                                <a href="${card.url}" target="_blank" rel="noopener noreferrer" class="btn-open-trello">
-                                    <span>Trello</span>
-                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
-                                </a>
-                            ` : ''}
-                        </div>
-                    </div>
-                `;
-                tasksContainer.appendChild(cardEl);
-            });
-        }
+        this.renderModalTasks();
 
         this.memberModal.classList.add('active');
         document.body.style.overflow = 'hidden';
+    }
+
+    renderModalTasks() {
+        if (!this.selectedMember) return;
+        const tasksContainer = document.getElementById('modal-tasks-container');
+        if (!tasksContainer) return;
+        tasksContainer.innerHTML = '';
+
+        const member = this.selectedMember;
+        let cards = [...member.cards];
+
+        if (this.modalTaskFilter === 'active') {
+            cards = cards.filter(c => !c.isDone);
+        } else if (this.modalTaskFilter === 'inactive') {
+            cards = cards.filter(c => c.isDone);
+        }
+
+        // Ordenar: activas primero (priorizando vencimientos), inactivas después
+        cards.sort((a, b) => {
+            if (a.isDone !== b.isDone) return a.isDone ? 1 : -1;
+            if (a.dueStatus === 'overdue' && b.dueStatus !== 'overdue') return -1;
+            if (b.dueStatus === 'overdue' && a.dueStatus !== 'overdue') return 1;
+            if (a.due && b.due) return new Date(a.due) - new Date(b.due);
+            return 0;
+        });
+
+        if (cards.length === 0) {
+            const msg = this.modalTaskFilter === 'active'
+                ? 'No hay tareas activas en curso para este integrante.'
+                : (this.modalTaskFilter === 'inactive'
+                    ? 'No hay tareas inactivas o finalizadas registradas para este integrante.'
+                    : 'Este integrante no posee tareas asignadas en el tablero.');
+            tasksContainer.innerHTML = `<p style="color: var(--text-muted); padding: 24px 0; text-align: center;">${msg}</p>`;
+            return;
+        }
+
+        cards.forEach(card => {
+            const cardEl = document.createElement('div');
+            cardEl.className = `modal-task-card ${card.isDone ? 'is-inactive-card' : 'is-active-card'}`;
+
+            const labelsHtml = (card.labels || []).map(l => {
+                const colorClass = l.color ? `label-${l.color}` : '';
+                return `<span class="task-label-chip ${colorClass}">${this.escapeHtml(l.name)}</span>`;
+            }).join('');
+
+            const statusBadgeHtml = card.isDone
+                ? `<span class="modal-status-badge inactive">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                        Inactiva / Finalizada
+                   </span>`
+                : `<span class="modal-status-badge active">
+                        <span class="pulse-dot"></span>
+                        Activa en Curso
+                   </span>`;
+
+            const stageHtml = card.isDone
+                ? `<span class="task-mini-stage" style="background: #DCFCE7; color: #166534; border: 1px solid #86EFAC;">✓ ${this.escapeHtml(card.listName)}</span>`
+                : `<span class="task-mini-stage">${this.escapeHtml(card.listName)}</span>`;
+
+            cardEl.innerHTML = `
+                <div class="modal-task-header-row">
+                    ${statusBadgeHtml}
+                    ${stageHtml}
+                </div>
+                <div class="modal-task-top">
+                    <div class="modal-task-title ${card.isDone ? 'text-done-title' : ''}">${this.escapeHtml(card.name)}</div>
+                </div>
+                ${card.desc ? `<div class="modal-task-desc">${this.escapeHtml(card.desc)}</div>` : ''}
+                ${this.data.multiBoard && card.boardName ? `<div class="modal-task-board">Tablero: ${this.escapeHtml(card.boardName)}</div>` : ''}
+                <div class="modal-task-meta">
+                    <div class="task-labels-wrap">
+                        ${labelsHtml || '<span style="color: var(--text-muted); font-size: 0.74rem;">Sin etiquetas</span>'}
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 14px;">
+                        ${card.dueFormatted ? `<span class="due-indicator ${card.dueStatus}">📅 ${card.dueFormatted}</span>` : ''}
+                        ${card.url && card.url !== '#' ? `
+                            <a href="${card.url}" target="_blank" rel="noopener noreferrer" class="btn-open-trello">
+                                <span>Trello</span>
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+                            </a>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+            tasksContainer.appendChild(cardEl);
+        });
     }
 
     closeMemberModal() {
